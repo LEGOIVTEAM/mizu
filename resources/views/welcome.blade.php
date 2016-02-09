@@ -8,6 +8,8 @@
                 <div class="panel-heading">Welcome</div>
 
                 <div class="panel-body">
+                    @include('flash::message')
+
                     Your Application's Landing Page.
                 </div>
             </div>
