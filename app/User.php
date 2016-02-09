@@ -34,5 +34,5 @@ class User extends Authenticatable
         $this->verified = true;
         $this->token = null;
         $this->save();
-    }    
+    }
 }

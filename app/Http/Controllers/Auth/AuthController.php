@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Auth;
 
-use Mail;
-use App\User;
-use Validator;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Foundation\Auth\ThrottlesLogins;
+use App\User;
 use Illuminate\Foundation\Auth\AuthenticatesAndRegistersUsers;
+use Illuminate\Foundation\Auth\ThrottlesLogins;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Laracasts\Flash\Flash;
+use Mail;
+use Validator;
 
 class AuthController extends Controller
 {
@@ -49,20 +49,21 @@ class AuthController extends Controller
     public function __construct()
     {
         $this->middleware('guest', [
-            'except' => ['logout', 'confirmEmail']]);
+            'except' => ['logout', 'confirmEmail'], ]);
     }
 
     /**
      * Get a validator for an incoming registration request.
      *
-     * @param  array  $data
+     * @param array $data
+     *
      * @return \Illuminate\Contracts\Validation\Validator
      */
     protected function validator(array $data)
     {
         return Validator::make($data, [
-            'name' => 'required|max:255',
-            'email' => 'required|email|max:255|unique:users',
+            'name'     => 'required|max:255',
+            'email'    => 'required|email|max:255|unique:users',
             'password' => 'required|confirmed|min:6',
         ]);
     }
@@ -70,31 +71,34 @@ class AuthController extends Controller
     /**
      * Create a new user instance after a valid registration.
      *
-     * @param  array  $data
+     * @param array $data
+     *
      * @return User
      */
     protected function create(array $data)
     {
         $token = hash_hmac('sha256', Str::random(40), config('app.key'));
         $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
+            'name'     => $data['name'],
+            'email'    => $data['email'],
             'password' => bcrypt($data['password']),
-            'token' => $token,
+            'token'    => $token,
         ]);
         $username = $data['name'];
-        Mail::send('auth.emails.verify', compact('token', 'username'), function($message) use ($data) {
+        Mail::send('auth.emails.verify', compact('token', 'username'), function ($message) use ($data) {
             $message->to($data['email'], $data['name'])
                     ->subject('Verify your email address');
         });
         Flash::message('Thank you for registering! Please check your email and verify your account.');
-        return $user;
 
+        return $user;
     }
+
     /**
      * Confirm a user's email address.
      *
-     * @param  string $token
+     * @param string $token
+     *
      * @return mixed
      */
     public function confirmEmail($token)
@@ -104,9 +108,11 @@ class AuthController extends Controller
             $this->logout();
             $user->confirmEmail();
             Flash::message('You are now verified.');
+
             return redirect('home');
         }
         Flash::message('Verify code does not exist.');
+
         return redirect('/');
     }
 
