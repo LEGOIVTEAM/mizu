@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Mail;
 use App\User;
 use Validator;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\ThrottlesLogins;
 use Illuminate\Foundation\Auth\AuthenticatesAndRegistersUsers;
+use Laracasts\Flash\Flash;
 
 class AuthController extends Controller
 {
@@ -28,7 +32,14 @@ class AuthController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/';
+    protected $redirectTo = '/home';
+
+    /**
+     * Where to redirect users after logout.
+     *
+     * @var string
+     */
+    protected $redirectAfterLogout = '/login';
 
     /**
      * Create a new authentication controller instance.
@@ -37,7 +48,8 @@ class AuthController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('guest', ['except' => 'logout']);
+        $this->middleware('guest', [
+            'except' => ['logout', 'confirmEmail']]);
     }
 
     /**
@@ -63,10 +75,52 @@ class AuthController extends Controller
      */
     protected function create(array $data)
     {
-        return User::create([
+        $token = hash_hmac('sha256', Str::random(40), config('app.key'));
+        $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => bcrypt($data['password']),
+            'token' => $token,
         ]);
+        $username = $data['name'];
+        Mail::send('auth.emails.verify', compact('token', 'username'), function($message) use ($data) {
+            $message->to($data['email'], $data['name'])
+                    ->subject('Verify your email address');
+        });
+        Flash::message('Thank you for registering! Please check your email and verify your account.');
+        return $user;
+
+    }
+    /**
+     * Confirm a user's email address.
+     *
+     * @param  string $token
+     * @return mixed
+     */
+    public function confirmEmail($token)
+    {
+        $user = User::whereToken($token)->first();
+        if ($user) {
+            $this->logout();
+            $user->confirmEmail();
+            Flash::message('You are now verified.');
+            return redirect('home');
+        }
+        Flash::message('Verify code does not exist.');
+        return redirect('/');
+    }
+
+    /**
+     * Log the user out of the application.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function logout()
+    {
+        Auth::guard($this->getGuard())->logout();
+
+        Flash::message('You are now logged out.');
+
+        return redirect(property_exists($this, 'redirectAfterLogout') ? $this->redirectAfterLogout : '/');
     }
 }
